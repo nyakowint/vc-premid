@@ -143,7 +143,7 @@ const shig = definePlugin({
                 - Install the <Link href="https://premid.app/downloads#ext-downloads">PreMiD browser extension</Link>
             </Forms.FormText>
             <Forms.FormText>
-                - Download the <Link href="https://github.com/venchOrd/vc-midbridge">bridge script</Link> and place it somewhere easy to find
+                - Download the <Link href="https://github.com/nyakowint/vc-pmb">bridge script</Link> and place it somewhere easy to find
             </Forms.FormText>
             <Forms.FormText>
                 That is all you need, the plugin+bridge replicates their electron tray process so no need to use allat.
