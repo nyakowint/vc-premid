@@ -9,7 +9,10 @@ Supports watching/listening status and additionally attempts to match category t
 - `music` -> **LISTENING**
 - `videos` -> **WATCHING**
 - Everything else falls back to **PLAYING**
-*Discord does not display timestamps nor the timebar on desktop/web for some reason. You can check this yourself, it works just fine on mobile*
+
+> [!NOTE]
+> *Discord does not display timestamps nor the timebar on desktop/web for some reason. You can check this yourself, it works just fine on mobile*
+
 
 ## Installation
 There are two versions of this plugin:
@@ -23,6 +26,6 @@ There are two versions of this plugin:
 - Build Vencord with `pnpm build`
 - Fully restart Discord (Settings > Vencord > Restart Client)
 
-> [!WARNING]
+> [!IMPORTANT]
 > 1. Only the PreMiD browser extension is supported. Offshoots/forks are not guaranteed to work if they function too differently.
-> Installing extra dependencies not included in upstream Vencord may cause a merge conflict in the future. Since this is your local installation, it is your responsibility to resolve it. There is no way around this (other than this plugin/socketio being added into upstream)
+> 2. Installing extra dependencies not included in upstream Vencord may cause a merge conflict in the future. Since this is your local installation, it is your responsibility to resolve it. There is no way around this (other than this plugin/socketio being added into upstream)
