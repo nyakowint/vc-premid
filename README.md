@@ -1,6 +1,7 @@
-# PreMiD Vencord (inspired by premid-powercord)
+# PreMiD Vencord
+inspired by [premid-powercord](https://github.com/MulverineX/premid-powercord)
 
-Alternative way to bridge premid to discord, instead of using their tray app thing
+Connect the [PreMiD Extension](https://premid.app) to Discord using a Vencord plugin — An alternative to their tray process.
 
 Supports watching/listening status and additionally attempts to match category to status type:
 - `socials` w/ tag `video` -> **WATCHING**
@@ -8,12 +9,20 @@ Supports watching/listening status and additionally attempts to match category t
 - `music` -> **LISTENING**
 - `videos` -> **WATCHING**
 - Everything else falls back to **PLAYING**
-*Using watching/listening statuses this way do not show timestamps despite them being provided, so I attempted to replicate it myself for the watching status.*
+*Discord does not display timestamps nor the timebar on desktop/web for some reason. You can check this yourself, it works just fine on mobile*
 
-## Usage
-Clone this repo to `src/userplugins` and `pnpm build` Vencord.
-Follow the instructions in the [bridge](https://github.com/nyakowint/vc-pmb) repo and you're good to go.
+## Installation
+There are two versions of this plugin:
+- main (recommended): Uses `socket.io` npm package to allow the extension to connect with no extra applications.
+- legacy: Uses a bridge script and does not require you to install any extra packages into Vencord. Switch to the `legacy-bridge` branch for this version.
 
-> [!NOTE]
-> The bridge is required because of PreMiD devs being weird and using socket.io for whatever reason lol
-> including sio in vencord would be annoying and causes issues with building
+### Install instructions
+- Clone this repo to `src/userplugins`
+- For `main` branch, run `pnpm i socket.io` inside Vencord.
+  - For `legacy-bridge` branch, switch to it and follow the instructions there.
+- Build Vencord with `pnpm build`
+- Fully restart Discord (Settings > Vencord > Restart Client)
+
+> [!WARNING]
+> 1. Only the PreMiD browser extension is supported. Offshoots/forks are not guaranteed to work if they function too differently.
+> Installing extra dependencies not included in upstream Vencord may cause a merge conflict in the future. Since this is your local installation, it is your responsibility to resolve it. There is no way around this (other than this plugin/socketio being added into upstream)

@@ -4,14 +4,13 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-import { showNotification } from "@api/Notifications";
 import { definePluginSettings } from "@api/Settings";
 import { Link } from "@components/Link";
 import { Devs } from "@utils/constants";
 import { Logger } from "@utils/Logger";
-import definePlugin, { OptionType } from "@utils/types";
+import definePlugin, { OptionType, PluginNative } from "@utils/types";
 import { findByPropsLazy } from "@webpack";
-import { ApplicationAssetUtils, FluxDispatcher, Forms, Toasts, UserStore } from "@webpack/common";
+import { ApplicationAssetUtils, FluxDispatcher, Forms, Toasts } from "@webpack/common";
 
 interface ActivityAssets {
     large_image: string;
@@ -20,7 +19,12 @@ interface ActivityAssets {
     small_text: string;
 }
 
-interface Activity {
+type ActivityButton = {
+    label: string;
+    url: string;
+};
+
+export interface Activity {
     state: string;
     details?: string;
     timestamps?: {
@@ -38,6 +42,28 @@ interface Activity {
     flags: number;
 }
 
+interface PremidActivity {
+    state: string;
+    details?: string;
+    startTimestamp?: number;
+    endTimestamp?: number;
+    largeImageKey: string;
+    largeImageText: string;
+    smallImageKey: string;
+    smallImageText: string;
+    buttons?: ActivityButton[];
+    name?: string;
+    application_id: string;
+    type: number;
+    flags: number;
+}
+
+interface PresenceData {
+    // Only relevant types - https://github.com/PreMiD/PreMiD/blob/main/%40types/PreMiD/PresenceData.d.ts
+    clientId: string;
+    presenceData: PremidActivity;
+}
+
 const enum ActivityType {
     PLAYING = 0,
     LISTENING = 2,
@@ -49,11 +75,6 @@ const enum ActivityFlag {
     INSTANCE = 1 << 0
 }
 
-interface SocketMessage {
-    type: string;
-    data: any;
-}
-
 interface PublicApp {
     id: string;
     name: string;
@@ -62,8 +83,6 @@ interface PublicApp {
     flags: number;
 }
 
-let ws: WebSocket;
-let isReconnecting = false;
 const logger = new Logger("Vencord-PreMiD", "#8fd0ff");
 
 const RPCUtils = findByPropsLazy("fetchApplicationsRPC", "getRemoteIconURL");
@@ -74,7 +93,7 @@ async function getApp(applicationId: string): Promise<PublicApp> {
     const socket: any = {};
     debugLog(`Looking up ${applicationId}`);
     await RPCUtils.fetchApplicationsRPC(socket, applicationId);
-    console.log(socket);
+    logger.debug(socket);
     debugLog(`Lookup finished for ${socket.application.name}`);
     const activityType = await determineStatusType(socket.application);
     debugLog(`Activity type for ${socket.application.name}: ${activityType}`);
@@ -96,14 +115,22 @@ function setActivity(activity: Activity | undefined) {
 }
 
 const settings = definePluginSettings({
+    enableSet: {
+        description: "Should the plugin set presences?",
+        type: OptionType.BOOLEAN,
+        default: true,
+        onChange: (value: boolean) => {
+            if (!value) shiggyMid.clearActivity();
+        },
+    },
     showButtons: {
         description: "Show buttons",
         type: OptionType.BOOLEAN,
-        default: false,
+        default: true,
     },
     // Still have not felt like implementing this lol
     // manualShare: {
-    //     description: "Share status manually",
+    //     description: "Share presence manually",
     //     type: OptionType.BOOLEAN,
     //     default: false,
     // },
@@ -114,25 +141,19 @@ const settings = definePluginSettings({
     }
 });
 
-const shig = definePlugin({
+const Native = VencordNative.pluginHelpers["Vc-premid"] as PluginNative<typeof import("./native")>;
+let timerInterval: any;
+let prevActivity: Activity;
+
+const shiggyMid = definePlugin({
     name: "PreMiD",
     tags: ["presence", "premid", "rpc"],
     description: "A PreMiD app replacement. Supports watching/listening status. Requires extra setup (see settings)",
     authors: [Devs.Nyako],
     toolboxActions: {
-        "Reconnect PreMiD": () => {
-            isReconnecting = true;
-            shig.stop();
-            shig.start();
-        },
-    },
-
-    flux: {
-        RPC_APP_CONNECTED: (data: any) => {
-            if (ws.readyState === WebSocket.OPEN) return;
-            logger.log(`${data.application.name} connected from RPCServer, Attempting websocket connection`);
-            shig.stop();
-            shig.start();
+        "Toggle presence sharing": () => {
+            settings.store.enableSet = !settings.store.enableSet;
+            showToast(`Presence sharing is now ${settings.store.enableSet ? "enabled" : "disabled"}`);
         },
     },
 
@@ -140,82 +161,29 @@ const shig = definePlugin({
         <>
             <Forms.FormTitle tag="h3">How to use this plugin</Forms.FormTitle>
             <Forms.FormText>
-                - Install the <Link href="https://premid.app/downloads#ext-downloads">PreMiD browser extension</Link>
+                Install the <Link href="https://premid.app/downloads#ext-downloads">PreMiD browser extension</Link>.
+            </Forms.FormText>
+            <Forms.FormText tag="h4">
+                This will not work with anything that has differing behavior (such as PreWrap)
             </Forms.FormText>
             <Forms.FormText>
-                - Download the <Link href="https://github.com/nyakowint/vc-pmb">bridge script</Link> and place it somewhere easy to find
-            </Forms.FormText>
-            <Forms.FormText>
-                That is all you need, the plugin+bridge replicates their electron tray process so no need to use allat.
+                That's all you need, if you followed the instructions in this plugin's README you should be good. This plugin replicates their electron tray process so no need to use allat.
             </Forms.FormText>
         </>
     ),
 
     settings,
+    logger,
 
     start() {
-        this.initShidd();
+        Native.init();
     },
 
     stop() {
+        clearInterval(timerInterval);
+        timerInterval = null;
         this.clearActivity();
-    },
-
-    async initShidd() {
-        const user = UserStore.getCurrentUser();
-        const currentUser = {
-            type: "currentUser",
-            user: user
-        };
-        if (ws) ws.close();
-        ws = new WebSocket("ws://127.0.0.1:4020");
-
-        ws.onopen = () => {
-            showToast("PreMiD Connected");
-        };
-
-        ws.onmessage = async event => {
-            debugLog(`Raw Receive: ${event.data}`);
-            const message: SocketMessage = JSON.parse(event.data);
-            switch (message.type) {
-                case "getCurrentUser":
-                    logger.log("Sending currentUser");
-                    ws.send(JSON.stringify(currentUser));
-                    break;
-                case "setActivity":
-                    debugLog(`Received setActivity for ${message.data.application_id}`);
-                    const activity = await this.getActivity(message.data);
-                    setActivity(activity);
-                    break;
-                case "clearActivity":
-                    debugLog("Clearing activity");
-                    this.clearActivity();
-                    break;
-            }
-        };
-
-        ws.onclose = () => {
-            logger.log("PreMiD disconnected, clearing activity");
-            this.clearActivity();
-        };
-
-
-        const connectionSuccessful = await new Promise(res => setTimeout(() => res(ws.readyState === WebSocket.OPEN), 1000)); // check if open after 1s
-        if (!connectionSuccessful) {
-            logger.error("Failed to connect to PreMiD.");
-            if (isReconnecting) {
-                showNotification({
-                    title: "[PreMiD:Bridge] Connection failed",
-                    body: "Make sure both the bridge and PreMiD extension are running.",
-                    noPersist: true,
-                    onClick() {
-                        isReconnecting = true;
-                        shig.start();
-                    },
-                });
-                isReconnecting = false;
-            }
-        }
+        Native.disconnect();
     },
 
     clearActivity() {
@@ -226,92 +194,129 @@ const shig = definePlugin({
         });
     },
 
-    async getActivity(pmActivity: Activity): Promise<Activity | undefined> {
-        const appInfo = await getApp(pmActivity.application_id);
-        // debugLog(JSON.parse(JSON.stringify(act)));
+    showToast,
 
-        if (!appInfo.name || appInfo.name === "PreMiD") return;
+    async receiveActivity(pData: string) {
+        if (!settings.store.enableSet) return;
+        try {
+            const data: PresenceData = JSON.parse(pData);
+            const id = data.clientId;
+            if (!id) return;
+            const appInfo = await getApp(id);
+            const presence = { ...data.presenceData };
+            if (appInfo.name === "PreMiD") return;
+            logger.info(`Setting activity of ${appInfo.name} "${presence.details}"`);
 
-
-        const activity: Activity = {
-            application_id: pmActivity.application_id,
-            name: appInfo.name,
-            details: pmActivity.details,
-            state: pmActivity.state,
-            type: appInfo.statusType || ActivityType.PLAYING,
-            flags: ActivityFlag.INSTANCE,
-            assets: {
-                large_image: await getAppAsset(pmActivity.application_id, pmActivity.assets?.large_image ?? "guh"),
-                small_image: await getAppAsset(pmActivity.application_id, pmActivity.assets?.small_image ?? "guhh"),
-                small_text: pmActivity.assets?.small_text || "hello there :3",
-            }
-        };
-
-        if (activity.type === ActivityType.PLAYING) {
-            activity.assets = {
-                large_image: await getAppAsset(pmActivity.application_id, pmActivity.assets?.large_image ?? "guh"),
-                large_text: `vcMiD v${this.version}`,
-                small_image: await getAppAsset(pmActivity.application_id, pmActivity.assets?.small_image ?? "guhh"),
-                small_text: pmActivity.assets?.small_text || "hello there :3",
+            const { details, state, largeImageKey, smallImageKey, smallImageText } = presence;
+            const activity: Activity = {
+                application_id: id,
+                name: appInfo.name,
+                details: details ?? "",
+                state: state ?? "",
+                type: appInfo.statusType || ActivityType.PLAYING,
+                flags: ActivityFlag.INSTANCE,
+                assets: {
+                    large_image: await getAppAsset(id, largeImageKey ?? "oops"),
+                    small_image: await getAppAsset(id, smallImageKey ?? "oops"),
+                    small_text: smallImageText || "hello there :3",
+                },
+                buttons: presence.buttons?.map((b: { label: any; }) => b.label),
+                metadata: {
+                    button_urls: presence.buttons?.map((b: { url: any; }) => b.url)
+                },
+                timestamps: {
+                    start: presence.startTimestamp,
+                    end: presence.endTimestamp
+                }
             };
-        }
 
-        if (settings.store.showButtons && pmActivity.buttons) {
-            if (appInfo.name === "YouTube" && settings.store.hideViewChannel) {
-                activity.buttons = [pmActivity.buttons[0]];
-                if (activity.metadata && pmActivity.metadata && pmActivity.metadata.button_urls) {
-                    activity.metadata.button_urls = [pmActivity.metadata.button_urls[0]];
-                }
-            } else {
-                activity.buttons = pmActivity.buttons;
-                activity.metadata = pmActivity.metadata;
-            }
-        }
 
-        // horror
-        if (pmActivity.timestamps) {
-            const { start, end } = pmActivity.timestamps;
-            if (start && end) {
-                activity.timestamps = pmActivity.timestamps;
-            } else if (start) {
-                if (activity.type === ActivityType.WATCHING) {
-                    activity.assets.large_text = `${formatTime(Math.floor(Date.now() / 1000) - start)} elapsed`;
-                }
-                activity.timestamps = {
-                    start: start
-                };
-            } else if (end) {
-                if (activity.type === ActivityType.WATCHING) {
-                    activity.assets.large_text = `${formatTime(end - Math.floor(Date.now() / 1000))} left`;
-                }
-                activity.timestamps = {
-                    ...activity.timestamps,
-                    end: end
+            if (activity.type === ActivityType.PLAYING) {
+                activity.assets = {
+                    large_image: await getAppAsset(id, largeImageKey ?? "guh"),
+                    large_text: "vc-premid",
+                    small_image: await getAppAsset(id, smallImageKey ?? "guhh"),
+                    small_text: smallImageText || "hello there :3",
                 };
             }
+
+            if (settings.store.showButtons && activity.buttons) {
+                if (appInfo.name === "YouTube" && settings.store.hideViewChannel) {
+                    activity.buttons?.pop();
+                    if (activity.metadata && activity.metadata && activity.metadata.button_urls) {
+                        activity.metadata.button_urls = [activity.metadata.button_urls[0]];
+                    }
+                }
+            }
+
+            // Discord sooo braindead - timestamps for WATCHING/LISTENING show on mobile but not desktop lmaoo
+
+            // if (activity.timestamps) {
+            //     const { start, end } = activity.timestamps;
+            //     if (start && end) {
+            //         activity.timestamps = {
+            //             start,
+            //             end
+            //         };
+            //     } else if (start) {
+            //         if (activity.type === ActivityType.WATCHING || activity.type === ActivityType.LISTENING) {
+            //             activity.assets.large_text = `${formatTime(Math.floor(Date.now() / 1000) - start)} elapsed`;
+            //         }
+            //         activity.timestamps = {
+            //             start: start
+            //         };
+            //     } else if (end) {
+            //         if (activity.type === ActivityType.WATCHING || activity.type === ActivityType.LISTENING) {
+            //             const remainingTime = end - Math.floor(Date.now() / 1000);
+            //             activity.assets.large_text = `${formatTime(remainingTime)} left`;
+            //         }
+            //         activity.timestamps = {
+            //             ...activity.timestamps,
+            //             end: end
+            //         };
+            //     }
+            // }
+
+            // prevActivity = activity;
+
+            // if (activity.type === ActivityType.WATCHING) {
+            //     if (activity.timestamps) {
+            //         clearInterval(timerInterval);
+            //         timerInterval = setInterval(() => updateTimer(prevActivity, activity), 1000);
+            //     }
+            // }
+
+            for (const k in activity) {
+                if (k === "type") continue; // without type, the presence is considered invalid.
+                const v = activity[k];
+                if (!v || v.length === 0)
+                    delete activity[k];
+            }
+
+
+            setActivity(activity);
+        } catch (err) {
+            logger.error(err);
         }
-
-
-        for (const k in activity) {
-            if (k === "type") continue; // without type, the presence is considered invalid.
-            const v = activity[k];
-            if (!v || v.length === 0)
-                delete activity[k];
-        }
-
-        debugLog(JSON.parse(JSON.stringify(activity)));
-
-        return activity;
     }
 });
 
 
-// Watching status doesnt support timestamps LOL
-function formatTime(seconds: number): string {
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = seconds % 60;
-    return `${minutes.toString().padStart(2, "0")}:${remainingSeconds.toString().padStart(2, "0")}`;
-}
+// function formatTime(seconds: number): string {
+//     seconds = Math.max(0, seconds);
+
+//     const hours = Math.floor(seconds / 3600);
+//     seconds -= hours * 3600;
+//     const minutes = Math.floor(seconds / 60);
+//     const remainingSeconds = seconds % 60;
+
+//     let formattedTime = `${minutes.toString().padStart(2, "0")}:${remainingSeconds.toString().padStart(2, "0")}`;
+//     if (hours > 0) {
+//         formattedTime = `${hours.toString()}:${formattedTime}`;
+//     }
+
+//     return formattedTime;
+// }
 
 async function determineStatusType(info: PublicApp): Promise<ActivityType | undefined> {
     let firstCharacter = info.name.charAt(0);
@@ -320,7 +325,7 @@ async function determineStatusType(info: PublicApp): Promise<ActivityType | unde
     } else if (firstCharacter.match(/[0-9]/)) {
         firstCharacter = "0-9";
     } else {
-        firstCharacter = "%23"; // URL encoded version of #
+        firstCharacter = "%23"; // #
     }
 
     const res = await fetch(`https://raw.githubusercontent.com/PreMiD/Presences/main/websites/${firstCharacter}/${info.name}/metadata.json`);
@@ -355,10 +360,10 @@ function debugLog(msg: string) {
     if (IS_DEV) console.log(msg);
 }
 
-function showToast(msg: string, type = Toasts.Type.SUCCESS) {
+function showToast(msg: string) {
     Toasts.show({
         message: msg,
-        type: type,
+        type: Toasts.Type.SUCCESS,
         id: Toasts.genId(),
         options: {
             duration: 5000,
@@ -367,5 +372,5 @@ function showToast(msg: string, type = Toasts.Type.SUCCESS) {
     });
 }
 
-export default shig;
+export default shiggyMid;
 
