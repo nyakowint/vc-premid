@@ -21,11 +21,10 @@ There are two versions of this plugin:
 
 ### Install instructions
 - Clone this repo to `src/userplugins`
-- For `main` branch, run `pnpm i socket.io` inside Vencord.
-  - For `legacy-bridge` branch, switch to it and follow the instructions there.
 - Build Vencord with `pnpm build`
 - Fully restart Discord (Settings > Vencord > Restart Client)
 
+- For `legacy-bridge` branch, switch to it and follow the instructions there.
+
 > [!IMPORTANT]
-> 1. Only the PreMiD browser extension is supported. Offshoots/forks are not guaranteed to work if they function too differently.
-> 2. Installing extra dependencies not included in upstream Vencord may cause a merge conflict in the future. Since this is your local installation, it is your responsibility to resolve it. There is no way around this (other than this plugin/socketio being added into upstream)
+> Only the PreMiD browser extension is supported. Offshoots/forks are not guaranteed to work if they function too differently.
