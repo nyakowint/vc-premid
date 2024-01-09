@@ -97,7 +97,7 @@ async function getApp(applicationId: string): Promise<PublicApp> {
     debugLog(`Lookup finished for ${socket.application.name}`);
     const activityType = await determineStatusType(socket.application);
     debugLog(`Activity type for ${socket.application.name}: ${activityType}`);
-    socket.application.statusType = activityType || ActivityType.PLAYING;
+    socket.application.statusType = settings.store.detectCategory ? activityType : ActivityType.PLAYING || ActivityType.PLAYING;
     apps[applicationId] = socket.application;
     return socket.application;
 }
@@ -128,17 +128,22 @@ const settings = definePluginSettings({
         type: OptionType.BOOLEAN,
         default: true,
     },
+    detectCategory: {
+        description: "Set your Activity Type based on presence category",
+        type: OptionType.BOOLEAN,
+        default: true,
+    },
+    hideViewChannel: {
+        description: "YouTube: Hide view channel button",
+        type: OptionType.BOOLEAN,
+        default: false,
+    },
     // Still have not felt like implementing this lol
     // manualShare: {
     //     description: "Share presence manually",
     //     type: OptionType.BOOLEAN,
     //     default: false,
-    // },
-    hideViewChannel: {
-        description: "YouTube: Hide view channel button",
-        type: OptionType.BOOLEAN,
-        default: false,
-    }
+    // }
 });
 
 const Native = VencordNative.pluginHelpers["Vc-premid"] as PluginNative<typeof import("./native")>;
@@ -193,13 +198,13 @@ const shiggyMid = definePlugin({
 
     showToast,
 
-    async receiveActivity(pData: string) {
+    async receiveActivity(data: PresenceData) {
+        logger.log("Received activity", data);
         if (!settings.store.enableSet) {
             this.clearActivity();
             return;
         }
         try {
-            const data: PresenceData = JSON.parse(pData);
             const id = data.clientId;
             if (!id) return;
             const appInfo = await getApp(id);
@@ -350,7 +355,7 @@ async function determineStatusType(info: PublicApp): Promise<ActivityType | unde
                 return ActivityType.WATCHING;
         }
     } catch (e) {
-        console.error(e);
+        logger.error(e);
         return ActivityType.PLAYING;
     }
     return ActivityType.PLAYING;

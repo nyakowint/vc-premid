@@ -5,35 +5,24 @@
  */
 
 import { User } from "discord-types/general";
-import { app, WebFrameMain } from "electron";
+import { app, WebContents } from "electron";
 import { createServer, Server as HttpServer } from "http";
 
 import { Server, Socket } from "./dependencies.dist";
 
 let io: Server;
 let httpServer: HttpServer;
-let webFrame: WebFrameMain;
+let webFrame: WebContents;
 let hasInit = false;
 
 app.on("browser-window-created", (_, win) => {
-    win.webContents.on("frame-created", (_, { frame }) => {
-        frame.once("dom-ready", async () => {
-            if (frame.url.startsWith("https://discord.com")) {
-                webFrame = frame;
-            }
-        });
-    });
+    webFrame = win.webContents;
 });
 
 
 export function init() {
     if (hasInit) return;
     httpServer = createServer();
-
-    if (!webFrame) {
-        console.warn("WHERE IS THE FRAME BRUH");
-        return;
-    }
 
     io = new Server(httpServer, {
         serveClient: false,
@@ -86,14 +75,12 @@ async function onConnect(sio: Socket) {
 }
 
 function info(message: string) {
-    if (webFrame) {
-        webFrame.executeJavaScript(`window.Vencord.Plugins.plugins.PreMiD.logger.info('${message}')`);
-    }
+    webFrame.executeJavaScript(`window.Vencord.Plugins.plugins.PreMiD.logger.info('${message}')`);
 }
 
-function setActivity(data: any) {
+function setActivity(activity: any) {
     // hopefully this works
-    webFrame.executeJavaScript(`window.Vencord.Plugins.plugins.PreMiD.receiveActivity("${JSON.stringify(data).replace(/\\/g, "\\\\").replace(/"/g, '\\"')}")`);
+    webFrame.executeJavaScript(`window.Vencord.Plugins.plugins.PreMiD.receiveActivity(${JSON.stringify(activity)})`);
 }
 
 function clearActivity() {

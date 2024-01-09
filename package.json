@@ -4,7 +4,7 @@
     "description": "",
     "main": "index.js",
     "scripts": {
-        "bruh": "esbuild dependencies.ts --platform=node --bundle --format=cjs > dependencies.dist.js"
+        "bruh": "esbuild dependencies.ts --platform=node --tree-shaking=true --bundle --format=cjs > dependencies.dist.js"
     },
     "keywords": [],
     "author": "",
