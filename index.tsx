@@ -78,7 +78,7 @@ async function getApp(applicationId: string): Promise<PublicApp> {
     debugLog(`Lookup finished for ${socket.application.name}`);
     const activityType = await determineStatusType(socket.application);
     debugLog(`Activity type for ${socket.application.name}: ${activityType}`);
-    socket.application.statusType = activityType || ActivityType.PLAYING;
+    socket.application.statusType = settings.store.detectCategory ? activityType : ActivityType.PLAYING || ActivityType.PLAYING;
     apps[applicationId] = socket.application;
     return socket.application;
 }
@@ -101,12 +101,11 @@ const settings = definePluginSettings({
         type: OptionType.BOOLEAN,
         default: false,
     },
-    // Still have not felt like implementing this lol
-    // manualShare: {
-    //     description: "Share status manually",
-    //     type: OptionType.BOOLEAN,
-    //     default: false,
-    // },
+    detectCategory: {
+        description: "Set your Activity Type based on presence category",
+        type: OptionType.BOOLEAN,
+        default: true,
+    },
     hideViewChannel: {
         description: "YouTube: Hide view channel button",
         type: OptionType.BOOLEAN,
@@ -228,7 +227,6 @@ const shig = definePlugin({
 
     async getActivity(pmActivity: Activity): Promise<Activity | undefined> {
         const appInfo = await getApp(pmActivity.application_id);
-        // debugLog(JSON.parse(JSON.stringify(act)));
 
         if (!appInfo.name || appInfo.name === "PreMiD") return;
 
@@ -250,7 +248,7 @@ const shig = definePlugin({
         if (activity.type === ActivityType.PLAYING) {
             activity.assets = {
                 large_image: await getAppAsset(pmActivity.application_id, pmActivity.assets?.large_image ?? "guh"),
-                large_text: `vcMiD v${this.version}`,
+                large_text: "vc-premid",
                 small_image: await getAppAsset(pmActivity.application_id, pmActivity.assets?.small_image ?? "guhh"),
                 small_text: pmActivity.assets?.small_text || "hello there :3",
             };
@@ -269,27 +267,27 @@ const shig = definePlugin({
         }
 
         // horror
-        if (pmActivity.timestamps) {
-            const { start, end } = pmActivity.timestamps;
-            if (start && end) {
-                activity.timestamps = pmActivity.timestamps;
-            } else if (start) {
-                if (activity.type === ActivityType.WATCHING) {
-                    activity.assets.large_text = `${formatTime(Math.floor(Date.now() / 1000) - start)} elapsed`;
-                }
-                activity.timestamps = {
-                    start: start
-                };
-            } else if (end) {
-                if (activity.type === ActivityType.WATCHING) {
-                    activity.assets.large_text = `${formatTime(end - Math.floor(Date.now() / 1000))} left`;
-                }
-                activity.timestamps = {
-                    ...activity.timestamps,
-                    end: end
-                };
-            }
-        }
+        // if (pmActivity.timestamps) {
+        //     const { start, end } = pmActivity.timestamps;
+        //     if (start && end) {
+        //         activity.timestamps = pmActivity.timestamps;
+        //     } else if (start) {
+        //         if (activity.type === ActivityType.WATCHING) {
+        //             activity.assets.large_text = `${formatTime(Math.floor(Date.now() / 1000) - start)} elapsed`;
+        //         }
+        //         activity.timestamps = {
+        //             start: start
+        //         };
+        //     } else if (end) {
+        //         if (activity.type === ActivityType.WATCHING) {
+        //             activity.assets.large_text = `${formatTime(end - Math.floor(Date.now() / 1000))} left`;
+        //         }
+        //         activity.timestamps = {
+        //             ...activity.timestamps,
+        //             end: end
+        //         };
+        //     }
+        // }
 
 
         for (const k in activity) {
@@ -307,11 +305,11 @@ const shig = definePlugin({
 
 
 // Watching status doesnt support timestamps LOL
-function formatTime(seconds: number): string {
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = seconds % 60;
-    return `${minutes.toString().padStart(2, "0")}:${remainingSeconds.toString().padStart(2, "0")}`;
-}
+// function formatTime(seconds: number): string {
+//     const minutes = Math.floor(seconds / 60);
+//     const remainingSeconds = seconds % 60;
+//     return `${minutes.toString().padStart(2, "0")}:${remainingSeconds.toString().padStart(2, "0")}`;
+// }
 
 async function determineStatusType(info: PublicApp): Promise<ActivityType | undefined> {
     let firstCharacter = info.name.charAt(0);
@@ -352,7 +350,7 @@ async function determineStatusType(info: PublicApp): Promise<ActivityType | unde
 }
 
 function debugLog(msg: string) {
-    if (IS_DEV) console.log(msg);
+    if (IS_DEV) logger.log(msg);
 }
 
 function showToast(msg: string, type = Toasts.Type.SUCCESS) {

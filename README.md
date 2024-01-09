@@ -1,6 +1,7 @@
-# PreMiD Vencord (inspired by premid-powercord)
+# PreMiD Vencord (legacy-bridge)
+inspired by [premid-powercord](https://github.com/MulverineX/premid-powercord)
 
-Alternative way to bridge premid to discord, instead of using their tray app thing
+Connect the [PreMiD Extension](https://premid.app) to Discord using a Vencord plugin and a bridge script — An alternative to their tray process.
 
 Supports watching/listening status and additionally attempts to match category to status type:
 - `socials` w/ tag `video` -> **WATCHING**
@@ -8,12 +9,13 @@ Supports watching/listening status and additionally attempts to match category t
 - `music` -> **LISTENING**
 - `videos` -> **WATCHING**
 - Everything else falls back to **PLAYING**
-*Using watching/listening statuses this way do not show timestamps despite them being provided, so I attempted to replicate it myself for the watching status.*
+
+> [!NOTE]
+> *Watching/Listening status timestamps and timebar do not display on desktop/web for some reason. You can blame discord for this*
 
 ## Usage
 Clone this repo to `src/userplugins` and `pnpm build` Vencord.
-Follow the instructions in the [bridge](https://github.com/nyakowint/vc-pmb) repo and you're good to go.
+Follow the instructions to setup the [bridge script](https://github.com/nyakowint/vc-pmb) and you're good to go.
 
 > [!NOTE]
-> The bridge is required because of PreMiD devs being weird and using socket.io for whatever reason lol
-> including sio in vencord would be annoying and causes issues with building
+> The bridge is required in this version as there is no plugin native code.
