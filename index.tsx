@@ -142,8 +142,6 @@ const settings = definePluginSettings({
 });
 
 const Native = VencordNative.pluginHelpers["Vc-premid"] as PluginNative<typeof import("./native")>;
-let timerInterval: any;
-let prevActivity: Activity;
 
 const shiggyMid = definePlugin({
     name: "PreMiD",
@@ -154,6 +152,7 @@ const shiggyMid = definePlugin({
         "Toggle presence sharing": () => {
             settings.store.enableSet = !settings.store.enableSet;
             showToast(`Presence sharing is now ${settings.store.enableSet ? "enabled" : "disabled"}`);
+            shiggyMid.clearActivity();
         },
     },
 
@@ -180,8 +179,6 @@ const shiggyMid = definePlugin({
     },
 
     stop() {
-        clearInterval(timerInterval);
-        timerInterval = null;
         this.clearActivity();
         Native.disconnect();
     },
@@ -197,7 +194,10 @@ const shiggyMid = definePlugin({
     showToast,
 
     async receiveActivity(pData: string) {
-        if (!settings.store.enableSet) return;
+        if (!settings.store.enableSet) {
+            this.clearActivity();
+            return;
+        }
         try {
             const data: PresenceData = JSON.parse(pData);
             const id = data.clientId;
