@@ -5,7 +5,7 @@
  */
 
 import { User } from "discord-types/general";
-import { app, WebFrameMain } from "electron";
+import { BrowserWindow } from "electron";
 import { createServer, Server as HttpServer } from "http";
 
 import { Server, Socket } from "./dependencies.dist";
@@ -13,16 +13,25 @@ import { Server, Socket } from "./dependencies.dist";
 let io: Server;
 let httpServer: HttpServer;
 let hasInit = false;
-let webFrame: WebFrameMain;
+let webFrame: any;
 
-app.on("browser-window-created", (_, win) => {
-    win.webContents.on("frame-created", (_, { frame }) => {
-        webFrame = frame;
-    });
-});
+// app.on("browser-window-created", (_, win) => {
+//     win.webContents.on("frame-created", (_, { frame }) => {
+//         webFrame = frame;
+//     });
+// });
 
 export function init() {
     if (hasInit) return;
+
+    const win = BrowserWindow.getFocusedWindow();
+    if (win) {
+        win.webContents.on("did-finish-load", () => {
+            webFrame = win.webContents.mainFrame;
+        });
+    } else {
+        console.error("[vc-premid] No focused window found");
+    }
     httpServer = createServer();
 
     io = new Server(httpServer, {
