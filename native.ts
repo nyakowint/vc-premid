@@ -5,7 +5,7 @@
  */
 
 import { User } from "discord-types/general";
-import { app, WebContents } from "electron";
+import { app, WebFrameMain } from "electron";
 import { createServer, Server as HttpServer } from "http";
 
 import { Server, Socket } from "./dependencies.dist";
@@ -13,10 +13,12 @@ import { Server, Socket } from "./dependencies.dist";
 let io: Server;
 let httpServer: HttpServer;
 let hasInit = false;
-let webFrame: WebContents;
+let webFrame: WebFrameMain;
 
 app.on("browser-window-created", (_, win) => {
-    webFrame = win.webContents;
+    win.webContents.on("frame-created", (_, { frame }) => {
+        webFrame = frame;
+    });
 });
 
 export function init() {
@@ -66,7 +68,6 @@ async function onConnect(sio: Socket) {
             info("Extension requested version");
             sio.emit("receiveVersion", "221");
         });
-
 
         sio.on("setActivity", setActivity);
         sio.on("clearActivity", clearActivity);
