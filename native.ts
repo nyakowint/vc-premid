@@ -12,13 +12,12 @@ import { Server, Socket } from "./dependencies.dist";
 
 let io: Server;
 let httpServer: HttpServer;
-let webFrame: WebContents;
 let hasInit = false;
+let webFrame: WebContents;
 
 app.on("browser-window-created", (_, win) => {
     webFrame = win.webContents;
 });
-
 
 export function init() {
     if (hasInit) return;
@@ -46,32 +45,36 @@ export function disconnect() {
 }
 
 async function onConnect(sio: Socket) {
-    info("PreMiD socket connected!");
-    webFrame.executeJavaScript("window.Vencord.Plugins.plugins.PreMiD.showToast('PreMiD connected!')");
+    try {
+        console.log("[vc-premid] PreMiD socket connected!");
+        webFrame.executeJavaScript("window.Vencord.Plugins.plugins.PreMiD.showToast('PreMiD connected!')");
 
-    // Get current user from plugin & send to extension
-    const {
-        username,
-        globalName,
-        id,
-        avatar,
-        discriminator,
-        flags,
-        premiumType
-    } = await webFrame.executeJavaScript("window.Vencord.Webpack.Common.UserStore.getCurrentUser()") as User | any;
-    sio.emit("discordUser", { username, global_name: globalName, discriminator, id, avatar, bot: false, flags, premium_type: premiumType });
+        // Get current user from plugin & send to extension
+        const {
+            username,
+            globalName,
+            id,
+            avatar,
+            discriminator,
+            flags,
+            premiumType
+        } = await webFrame.executeJavaScript("window.Vencord.Webpack.Common.UserStore.getCurrentUser()") as User | any;
+        sio.emit("discordUser", { username, global_name: globalName, discriminator, id, avatar, bot: false, flags, premium_type: premiumType });
 
-    // Extension requests Premid version
-    sio.on("getVersion", () => {
-        info("Extension requested version");
-        sio.emit("receiveVersion", "221");
-    });
+        // Extension requests Premid version
+        sio.on("getVersion", () => {
+            info("Extension requested version");
+            sio.emit("receiveVersion", "221");
+        });
 
 
-    sio.on("setActivity", setActivity);
-    sio.on("clearActivity", clearActivity);
-    sio.on("selectLocalPresence", () => { info("Selecting local presence is not supported"); });
-    sio.once("disconnect", () => onIoDisconnect());
+        sio.on("setActivity", setActivity);
+        sio.on("clearActivity", clearActivity);
+        sio.on("selectLocalPresence", () => { info("Selecting local presence is not supported"); });
+        sio.once("disconnect", () => onIoDisconnect());
+    } catch (e) {
+        console.error("[vc-premid] Error in onConnect: ", e);
+    }
 }
 
 function info(message: string) {
@@ -80,7 +83,7 @@ function info(message: string) {
 
 function setActivity(activity: any) {
     // hopefully this works
-    webFrame.executeJavaScript(`window.Vencord.Plugins.plugins.PreMiD.receiveActivity(${JSON.stringify(activity)})`);
+    webFrame.executeJavaScript(`window.Vencord.Plugins.plugins.PreMiD.receiveActivity(${JSON.stringify(activity)})`).catch(console.error);
 }
 
 function clearActivity() {
