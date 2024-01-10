@@ -18,15 +18,12 @@ export function init() {
     if (hasInit) return;
 
     const windows = BrowserWindow.getAllWindows();
+    const discordUrls = ["https://discord.com", "https://ptb.discord.com", "https://canary.discord.com"];
+
     for (const win of windows) {
         const url = win.webContents.getURL();
-        console.log(url);
-        switch (url) {
-            case "https://discord.com/app":
-            case "https://ptb.discord.com/app":
-            case "https://canary.discord.com/app":
-                webFrame = win.webContents;
-                break;
+        if (discordUrls.some(prefix => url.startsWith(prefix))) {
+            webFrame = win.webContents;
         }
     }
 
