@@ -26,11 +26,9 @@ export function init() {
 
     const win = BrowserWindow.getFocusedWindow();
     if (win) {
-        win.webContents.on("did-finish-load", () => {
-            webFrame = win.webContents.mainFrame;
-        });
+        webFrame = win.webContents;
     } else {
-        console.error("[vc-premid] No focused window found");
+        console.error("[vc-premid] no frame");
     }
     httpServer = createServer();
 
