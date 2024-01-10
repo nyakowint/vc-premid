@@ -4,8 +4,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-import { User } from "discord-types/general";
-import { BrowserWindow } from "electron";
+import { BrowserWindow, WebContents } from "electron";
 import { createServer, Server as HttpServer } from "http";
 
 import { Server, Socket } from "./dependencies.dist";
@@ -13,23 +12,24 @@ import { Server, Socket } from "./dependencies.dist";
 let io: Server;
 let httpServer: HttpServer;
 let hasInit = false;
-let webFrame: any;
-
-// app.on("browser-window-created", (_, win) => {
-//     win.webContents.on("frame-created", (_, { frame }) => {
-//         webFrame = frame;
-//     });
-// });
+let webFrame: WebContents;
 
 export function init() {
     if (hasInit) return;
 
-    const win = BrowserWindow.getFocusedWindow();
-    if (win) {
-        webFrame = win.webContents;
-    } else {
-        console.error("[vc-premid] no frame");
+    const windows = BrowserWindow.getAllWindows();
+    for (const win of windows) {
+        const url = win.webContents.getURL();
+        console.log(url);
+        switch (url) {
+            case "https://discord.com/app":
+            case "https://ptb.discord.com/app":
+            case "https://canary.discord.com/app":
+                webFrame = win.webContents;
+                break;
+        }
     }
+
     httpServer = createServer();
 
     io = new Server(httpServer, {
@@ -57,7 +57,6 @@ async function onConnect(sio: Socket) {
     try {
         console.log("[vc-premid] PreMiD socket connected!");
         webFrame.executeJavaScript("window.Vencord.Plugins.plugins.PreMiD.showToast('PreMiD connected!')");
-
         // Get current user from plugin & send to extension
         const {
             username,
@@ -67,7 +66,7 @@ async function onConnect(sio: Socket) {
             discriminator,
             flags,
             premiumType
-        } = await webFrame.executeJavaScript("window.Vencord.Webpack.Common.UserStore.getCurrentUser()") as User | any;
+        } = JSON.parse(await webFrame.executeJavaScript("JSON.stringify(window.Vencord.Webpack.Common.UserStore.getCurrentUser());"));
         sio.emit("discordUser", { username, global_name: globalName, discriminator, id, avatar, bot: false, flags, premium_type: premiumType });
 
         // Extension requests Premid version
