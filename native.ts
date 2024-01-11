@@ -95,7 +95,7 @@ function logRenderer(message: string) {
 
 function logError(message: string, ...args: any[]) {
     console.error(`[vc-premid] ${message}`, args);
-    alert(`vc-premid Error, please report this in thread or on github: ${message} ${args}`);
+    alert(`vc-premid Error, please report this in thread or on THE PLUGIN'S github: ${message} ${args}`);
 }
 
 function setActivity(activity: any) {
