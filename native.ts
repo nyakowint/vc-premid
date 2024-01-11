@@ -36,7 +36,7 @@ export function init() {
     });
     httpServer.listen(3020, () => {
         console.log("[vc-premid] SocketIO starting on 3020");
-        info("SocketIO starting on 3020");
+        logRenderer("SocketIO starting on 3020");
     });
     httpServer.on("error", onIOError);
     io.on("connection", onConnect);
@@ -52,7 +52,7 @@ export function disconnect() {
 
 async function onConnect(sio: Socket) {
     try {
-        console.log("[vc-premid] PreMiD socket connected!");
+        logRenderer("[vc-premid] PreMiD socket connected!");
         webFrame.executeJavaScript("window.Vencord.Plugins.plugins.PreMiD.showToast('PreMiD connected!')");
         // Get current user from plugin & send to extension
         const {
@@ -68,21 +68,34 @@ async function onConnect(sio: Socket) {
 
         // Extension requests Premid version
         sio.on("getVersion", () => {
-            info("Extension requested version");
+            logRenderer("Extension requested version");
             sio.emit("receiveVersion", "221");
         });
 
         sio.on("setActivity", setActivity);
         sio.on("clearActivity", clearActivity);
-        sio.on("selectLocalPresence", () => { info("Selecting local presence is not supported"); });
+        sio.on("selectLocalPresence", () => {
+            logRenderer("Selecting local presence is not supported");
+            alert("Selecting local presence is not supported");
+        });
         sio.once("disconnect", () => onIoDisconnect());
     } catch (e) {
-        console.error("[vc-premid] Error in onConnect: ", e);
+        logError("[vc-premid] Error in onConnect: ", e);
     }
 }
 
-function info(message: string) {
-    webFrame.executeJavaScript(`window.Vencord.Plugins.plugins.PreMiD.logger.info('${message}')`);
+function logRenderer(message: string) {
+    if (webFrame) {
+        webFrame.executeJavaScript(`window.Vencord.Plugins.plugins.PreMiD.logger.info('${message}')`);
+    } else {
+        // just in case, dont worry about it pls
+        console.log(`[vc-premid (fallback)] ${message}`);
+    }
+}
+
+function logError(message: string, ...args: any[]) {
+    console.error(`[vc-premid] ${message}`, args);
+    alert(`vc-premid Error, please report this in thread or on github: ${message} ${args}`);
 }
 
 function setActivity(activity: any) {
@@ -91,16 +104,16 @@ function setActivity(activity: any) {
 }
 
 function clearActivity() {
-    info("Clearing activity");
+    logRenderer("Clearing activity");
     webFrame.executeJavaScript("window.Vencord.Plugins.plugins.PreMiD.clearActivity()");
 }
 
 function onIOError(e: { message: any; code: string; }) {
-    console.error("[vc-premid] SocketIO error", e);
-    info(`SocketIO error ${e.code}: ${e.message}`);
+    logError("[vc-premid] SocketIO error", e);
 }
 
 async function onIoDisconnect() {
-    info("[vc-premid] SocketIO disconnected");
+    console.log("[vc-premid] SocketIO disconnected");
+    logRenderer("SocketIO disconnected");
     clearActivity();
 }
