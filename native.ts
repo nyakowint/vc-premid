@@ -53,7 +53,6 @@ export function disconnect() {
 async function onConnect(sio: Socket) {
     try {
         logRenderer("[vc-premid] PreMiD socket connected!");
-        webFrame.executeJavaScript("window.Vencord.Plugins.plugins.PreMiD.showToast('PreMiD connected!')");
         // Get current user from plugin & send to extension
         const {
             username,
