@@ -102,8 +102,15 @@ async function getApp(applicationId: string): Promise<PublicApp> {
     return socket.application;
 }
 
+const assetCache: Map<string, string> = new Map();
+// memoized because this method isnt cached
 async function getAppAsset(applicationId: string, key: string): Promise<string> {
-    return (await ApplicationAssetUtils.fetchAssetIds(applicationId, [key]))[0];
+    if (assetCache.has(applicationId + key)) {
+        return assetCache.get(applicationId + key)!;
+    }
+    const result = (await ApplicationAssetUtils.fetchAssetIds(applicationId, [key]))[0];
+    assetCache.set(applicationId + key, result);
+    return result;
 }
 
 function setActivity(activity: Activity | undefined) {
@@ -199,7 +206,7 @@ const shiggyMid = definePlugin({
     showToast,
 
     async receiveActivity(data: PresenceData) {
-        logger.log("Received activity", data);
+        logger.debug("Received activity", data);
         if (!settings.store.enableSet) {
             this.clearActivity();
             return;
@@ -210,7 +217,7 @@ const shiggyMid = definePlugin({
             const appInfo = await getApp(id);
             const presence = { ...data.presenceData };
             if (appInfo.name === "PreMiD") return;
-            logger.info(`Setting activity of ${appInfo.name} "${presence.details}"`);
+            logger.debug(`Setting activity of ${appInfo.name} "${presence.details}"`);
 
             const { details, state, largeImageKey, smallImageKey, smallImageText } = presence;
             const activity: Activity = {
