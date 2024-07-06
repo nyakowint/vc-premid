@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-import { BrowserWindow, WebContents } from "electron";
+import { BrowserWindow, dialog, WebContents } from "electron";
 import { createServer, Server as HttpServer } from "http";
 
 import { Server, Socket } from "./dependencies.dist";
@@ -75,11 +75,11 @@ async function onConnect(sio: Socket) {
         sio.on("clearActivity", clearActivity);
         sio.on("selectLocalPresence", () => {
             logRenderer("Selecting local presence is not supported");
-            alert("Selecting local presence is not supported");
+            dialog.showMessageBox({ message: "Selecting local presence is not supported right now!", title: "vc-premid: oops!" });
         });
         sio.once("disconnect", () => onIoDisconnect());
     } catch (e) {
-        logError("[vc-premid] Error in onConnect: ", e);
+        logError("Error in onConnect: ", e);
     }
 }
 
@@ -93,8 +93,7 @@ function logRenderer(message: string) {
 }
 
 function logError(message: string, ...args: any[]) {
-    console.error(`[vc-premid] ${message}`, args);
-    alert(`vc-premid Error, please report this in thread or on THE PLUGIN'S github: ${message} ${args}`);
+    console.error(`${message}`, args);
 }
 
 function setActivity(activity: any) {
@@ -107,8 +106,9 @@ function clearActivity() {
     webFrame.executeJavaScript("window.Vencord.Plugins.plugins.PreMiD.clearActivity()");
 }
 
-function onIOError(e: { message: any; code: string; }) {
-    logError("[vc-premid] SocketIO error", e);
+function onIOError(e: { message: string; code: string; }) {
+    if (e.message.includes("EADDRINUSE")) return; // dont care, probably 2+ clients open
+    logError("SocketIO error", e);
 }
 
 async function onIoDisconnect() {

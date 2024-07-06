@@ -144,20 +144,14 @@ const settings = definePluginSettings({
         description: "YouTube: Hide view channel button",
         type: OptionType.BOOLEAN,
         default: false,
-    },
-    // Still have not felt like implementing this lol
-    // manualShare: {
-    //     description: "Share presence manually",
-    //     type: OptionType.BOOLEAN,
-    //     default: false,
-    // }
+    }
 });
 
-const Native = VencordNative.pluginHelpers["Vc-premid"] as PluginNative<typeof import("./native")>;
+const Native = VencordNative.pluginHelpers["PreMiD"] as PluginNative<typeof import("./native")>;
 
 const shiggyMid = definePlugin({
     name: "PreMiD",
-    tags: ["presence", "premid", "rpc"],
+    tags: ["presence", "premid", "rpc", "watching"],
     description: "A PreMiD app replacement. Supports watching/listening status. Requires extra setup (see settings)",
     authors: [Devs.Nyako],
     toolboxActions: {
@@ -172,7 +166,7 @@ const shiggyMid = definePlugin({
         <>
             <Forms.FormTitle tag="h3">How to use this plugin</Forms.FormTitle>
             <Forms.FormText>
-                Install the <Link href="https://premid.app/downloads#ext-downloads">PreMiD browser extension</Link>.
+                Install the <Link href="https://premid.app/downloads#ext-downloads">PreMiD browser extension</Link>. (recommended to build your own version earlier than 2.6.0, their activity stuff suuuuucks and kinda breaks this plugin)
             </Forms.FormText>
             <Forms.FormText tag="h4">
                 This will not work with anything that has differing behavior (such as PreWrap)
