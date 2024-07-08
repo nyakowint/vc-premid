@@ -9,7 +9,7 @@ import { Link } from "@components/Link";
 import { Devs } from "@utils/constants";
 import { Logger } from "@utils/Logger";
 import definePlugin, { OptionType, PluginNative } from "@utils/types";
-import { findByPropsLazy } from "@webpack";
+import { findByCodeLazy } from "@webpack";
 import { ApplicationAssetUtils, FluxDispatcher, Forms, Toasts } from "@webpack/common";
 
 interface ActivityAssets {
@@ -85,14 +85,14 @@ interface PublicApp {
 
 const logger = new Logger("Vencord-PreMiD", "#8fd0ff");
 
-const RPCUtils = findByPropsLazy("fetchApplicationsRPC", "getRemoteIconURL");
+const fetchApplicationsRPC = findByCodeLazy("APPLICATION_RPC(", "Client ID");
 
 const apps: any = {};
 async function getApp(applicationId: string): Promise<PublicApp> {
     if (apps[applicationId]) return apps[applicationId];
     const socket: any = {};
     debugLog(`Looking up ${applicationId}`);
-    await RPCUtils.fetchApplicationsRPC(socket, applicationId);
+    await fetchApplicationsRPC(socket, applicationId);
     logger.debug(socket);
     debugLog(`Lookup finished for ${socket.application.name}`);
     const activityType = await determineStatusType(socket.application);
@@ -127,7 +127,7 @@ const settings = definePluginSettings({
         type: OptionType.BOOLEAN,
         default: true,
         onChange: (value: boolean) => {
-            if (!value) shiggyMid.clearActivity();
+            if (!value) preMid.clearActivity();
         },
     },
     showButtons: {
@@ -149,7 +149,7 @@ const settings = definePluginSettings({
 
 const Native = VencordNative.pluginHelpers["PreMiD"] as PluginNative<typeof import("./native")>;
 
-const shiggyMid = definePlugin({
+const preMid = definePlugin({
     name: "PreMiD",
     tags: ["presence", "premid", "rpc", "watching"],
     description: "A PreMiD app replacement. Supports watching/listening status. Requires extra setup (see settings)",
@@ -158,7 +158,7 @@ const shiggyMid = definePlugin({
         "Toggle presence sharing": () => {
             settings.store.enableSet = !settings.store.enableSet;
             showToast(`Presence sharing is now ${settings.store.enableSet ? "enabled" : "disabled"}`);
-            shiggyMid.clearActivity();
+            preMid.clearActivity();
         },
     },
 
@@ -166,7 +166,7 @@ const shiggyMid = definePlugin({
         <>
             <Forms.FormTitle tag="h3">How to use this plugin</Forms.FormTitle>
             <Forms.FormText>
-                Install the <Link href="https://premid.app/downloads#ext-downloads">PreMiD browser extension</Link>. (recommended to build your own version earlier than 2.6.0, their activity stuff suuuuucks and kinda breaks this plugin)
+                Install the <Link href="https://premid.app/downloads#ext-downloads">PreMiD browser extension</Link>. (recommended version: 2.5.2)
             </Forms.FormText>
             <Forms.FormText tag="h4">
                 This will not work with anything that has differing behavior (such as PreWrap)
@@ -378,5 +378,5 @@ function showToast(msg: string) {
     });
 }
 
-export default shiggyMid;
+export default preMid;
 
