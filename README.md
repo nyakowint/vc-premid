@@ -27,4 +27,5 @@ There are two versions of this plugin:
 
 > [!IMPORTANT]
 > Only the PreMiD browser extension is supported. Offshoots/forks are not guaranteed to work if they function too differently.
-> PreMiD extension versions newer than 2.5.2 are not guaranteed to work either. They use Discord's application presence capabilities now anyways (it sucks and is slow lol) 
+> 
+> PreMiD extension versions newer than 2.5.2 are not guaranteed to work either. (see https://github.com/nyakowint/vc-premid/issues/4 ) They use Discord's application presence capabilities now anyways (it sucks and is slow lol) 
