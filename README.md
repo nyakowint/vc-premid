@@ -11,7 +11,7 @@ Supports watching/listening status and additionally attempts to match category t
 - Everything else falls back to **PLAYING**
 
 > [!NOTE]
-> *Discord does not display timestamps nor the timebar on desktop/web for some reason. You can check this yourself, it works just fine on mobile*
+> *For watching and listening statuses, Discord does not display timestamps nor the timebar on desktop/web. You can check this yourself by opening Discord on mobile and checking profiles*
 
 
 ## Installation
@@ -20,11 +20,11 @@ There are two versions of this plugin:
 - legacy: Uses a bridge script and does not require you to install any extra packages into Vencord. Switch to the `legacy-bridge` branch for this version.
 
 ### Install instructions
-- Clone this repo to `src/userplugins`
-- Build Vencord with `pnpm build`
+- [Read the docs](https://docs.vencord.dev/installing/custom-plugins/) to setup custom plugins
 - Fully restart Discord (Settings > Vencord > Restart Client)
-
-- For `legacy-bridge` branch, switch to it and follow the instructions there.
+- Enable the plugin
+- Ensure your extension is working on whatever site you wish
 
 > [!IMPORTANT]
 > Only the PreMiD browser extension is supported. Offshoots/forks are not guaranteed to work if they function too differently.
+> PreMiD extension versions newer than 2.5.2 are not guaranteed to work either. They use Discord's application presence capabilities now anyways (it sucks and is slow lol) 
