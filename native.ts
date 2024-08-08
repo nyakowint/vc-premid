@@ -102,7 +102,6 @@ function setActivity(activity: any) {
 }
 
 function clearActivity() {
-    logRenderer("Clearing activity");
     webFrame.executeJavaScript("window.Vencord.Plugins.plugins.PreMiD.clearActivity()");
 }
 
