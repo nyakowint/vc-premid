@@ -166,7 +166,7 @@ const preMid = definePlugin({
         <>
             <Forms.FormTitle tag="h3">How to use this plugin</Forms.FormTitle>
             <Forms.FormText>
-                Install the <Link href="https://premid.app/downloads#ext-downloads">PreMiD browser extension</Link>. (recommended version: 2.5.2)
+                Install the <Link href="https://premid.app/downloads#ext-downloads">PreMiD browser extension</Link>. (recommended version: 2.5.2 OR 2.6.11+)
             </Forms.FormText>
             <Forms.FormText tag="h4">
                 This will not work with anything that has differing behavior (such as PreWrap)
@@ -255,43 +255,6 @@ const preMid = definePlugin({
                 }
             }
 
-            // Discord sooo braindead - timestamps for WATCHING/LISTENING show on mobile but not desktop lmaoo
-
-            // if (activity.timestamps) {
-            //     const { start, end } = activity.timestamps;
-            //     if (start && end) {
-            //         activity.timestamps = {
-            //             start,
-            //             end
-            //         };
-            //     } else if (start) {
-            //         if (activity.type === ActivityType.WATCHING || activity.type === ActivityType.LISTENING) {
-            //             activity.assets.large_text = `${formatTime(Math.floor(Date.now() / 1000) - start)} elapsed`;
-            //         }
-            //         activity.timestamps = {
-            //             start: start
-            //         };
-            //     } else if (end) {
-            //         if (activity.type === ActivityType.WATCHING || activity.type === ActivityType.LISTENING) {
-            //             const remainingTime = end - Math.floor(Date.now() / 1000);
-            //             activity.assets.large_text = `${formatTime(remainingTime)} left`;
-            //         }
-            //         activity.timestamps = {
-            //             ...activity.timestamps,
-            //             end: end
-            //         };
-            //     }
-            // }
-
-            // prevActivity = activity;
-
-            // if (activity.type === ActivityType.WATCHING) {
-            //     if (activity.timestamps) {
-            //         clearInterval(timerInterval);
-            //         timerInterval = setInterval(() => updateTimer(prevActivity, activity), 1000);
-            //     }
-            // }
-
             for (const k in activity) {
                 if (k === "type") continue; // without type, the presence is considered invalid.
                 const v = activity[k];
@@ -306,23 +269,6 @@ const preMid = definePlugin({
         }
     }
 });
-
-
-// function formatTime(seconds: number): string {
-//     seconds = Math.max(0, seconds);
-
-//     const hours = Math.floor(seconds / 3600);
-//     seconds -= hours * 3600;
-//     const minutes = Math.floor(seconds / 60);
-//     const remainingSeconds = seconds % 60;
-
-//     let formattedTime = `${minutes.toString().padStart(2, "0")}:${remainingSeconds.toString().padStart(2, "0")}`;
-//     if (hours > 0) {
-//         formattedTime = `${hours.toString()}:${formattedTime}`;
-//     }
-
-//     return formattedTime;
-// }
 
 async function determineStatusType(info: PublicApp): Promise<ActivityType | undefined> {
     let firstCharacter = info.name.charAt(0);
