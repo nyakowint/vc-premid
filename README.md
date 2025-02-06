@@ -1,4 +1,6 @@
-s# PreMiD Vencord
+## This plugin has been deprecated as of `Oct 1 2024` & the plugin's patches no longer work (Feb 2025)... 
+
+# PreMiD Vencord
 inspired by [premid-powercord](https://github.com/MulverineX/premid-powercord)
 
 Connect the [PreMiD Extension](https://premid.app) to Discord using a Vencord plugin — An alternative to their tray process.
